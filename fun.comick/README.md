@@ -1,9 +1,10 @@
-This connector displays the latest **Arabic** comic chapter updates from [Comick.io](https://comick.io).
+This connector displays the latest comic chapter updates from [Comick.io](https://comick.io) for a selected language.
 
-It fetches recently released **Arabic** chapters across various series available on the platform.
+It fetches recently released chapters across various series available on the platform based on your configuration.
 
 **Configuration:**
 
+*   **Select Language:** Choose the desired language for chapter updates from the dropdown list during feed setup.
 *   **Include NSFW Content:** Use the toggle in the feed settings to include or exclude chapters marked as NSFW/Erotic by the API.
 
 *Note: This connector relies on the public Comick API. Functionality may change based on API availability and structure.*
