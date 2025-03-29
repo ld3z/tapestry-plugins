@@ -1,5 +1,5 @@
 // The base URL for the Comick website (used for constructing links)
-const COMICK_WEB_URL = "https://comick.fun";
+const COMICK_WEB_URL = "https://comick.io";
 // The base URL for the API is automatically provided as the 'site' variable
 // from plugin-config.json
 
