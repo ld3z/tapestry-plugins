@@ -1,8 +1,8 @@
 {
-	"id": "fun.comick",
-	"display_name": "Comick",
+	"id": "en.comick",
+	"display_name": "ComicK (EN)",
 	"site": "https://api.comick.fun",
-	"service_name": "Comick",
+	"service_name": "ComicK",
 	"item_style": "post",
 	"version": 1,
 	"provides_attachments": false,

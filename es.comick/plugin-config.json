@@ -1,0 +1,11 @@
+{
+	"id": "es.comick",
+	"display_name": "ComicK (ES)",
+	"site": "https://api.comick.fun",
+	"service_name": "ComicK",
+	"item_style": "post",
+	"version": 1,
+	"provides_attachments": false,
+	"default_color": "orange",
+	"check_interval": 900
+} 

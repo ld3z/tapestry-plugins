@@ -2,11 +2,13 @@
 const COMICK_WEB_URL = "https://comick.io";
 // The base URL for the API is automatically provided as the 'site' variable
 // from plugin-config.json
+const LANGUAGE_CODE = "es"; // Define language code for Spanish
 
 function load() {
-	// Fetch the latest 40 chapters
+	// Fetch the latest 40 chapters for the specified language
 	// NOTE: Based on assumptions about the Comick API endpoint and parameters
-	const endpoint = site + "/chapter?order=new&page=1&limit=40";
+	// Added lang parameter to the endpoint
+	const endpoint = `${site}/chapter?order=new&page=1&limit=40&lang=${LANGUAGE_CODE}`;
 
 	sendRequest(endpoint)
 	.then((text) => {
@@ -23,7 +25,13 @@ function load() {
 		const chapters = jsonObject;
 
 		if (!Array.isArray(chapters)) {
-			processError(new Error("Unexpected response format from Comick API. Expected an array."));
+			// Check if the response indicates no chapters found for the language
+			if (typeof chapters === 'object' && chapters !== null && Object.keys(chapters).length === 0) {
+				console.log(`No chapters found for language: ${LANGUAGE_CODE}`);
+				processResults([]); // Process empty results if no chapters found
+				return;
+			}
+			processError(new Error(`Unexpected response format from Comick API for language ${LANGUAGE_CODE}. Expected an array.`));
 			return;
 		}
 
@@ -57,7 +65,8 @@ function load() {
 				}
 
 				// --- Construct URLs ---
-				const chapterUri = `${COMICK_WEB_URL}/comic/${comicSlug}/${chapterHid}-chapter-${chapterNum}-en`; // Unique URI for the item
+				// Use the LANGUAGE_CODE constant in the chapter URI
+				const chapterUri = `${COMICK_WEB_URL}/comic/${comicSlug}/${chapterHid}-chapter-${chapterNum}-${LANGUAGE_CODE}`; // Unique URI for the item
 				const comicUri = `${COMICK_WEB_URL}/comic/${comicSlug}`; // Link for the author/series
 
 				// --- Create Tapestry Item ---
@@ -70,15 +79,18 @@ function load() {
 					displayTitle += ` Vol. ${volumeNum}`;
 				}
 				if (chapterNum) {
-					displayTitle += ` Ch. ${chapterNum}`;
+					// Adjust title format slightly for Spanish if desired, e.g., "Cap."
+					displayTitle += ` Cap. ${chapterNum}`;
 				}
 				if (chapterTitle) {
 					displayTitle += `: ${chapterTitle}`;
 				}
-				item.title = displayTitle;
+				// Add language identifier to title for clarity
+				item.title = `${displayTitle} [${LANGUAGE_CODE.toUpperCase()}]`;
 
 				// --- Set Body ---
-				item.body = `<p>New chapter released: <a href="${chapterUri}">Read ${comicTitle} Chapter ${chapterNum}</a></p>`;
+				// Use the LANGUAGE_CODE constant in the link text and adjust wording
+				item.body = `<p>Nuevo capítulo publicado: <a href="${chapterUri}">Leer ${comicTitle} Capítulo ${chapterNum} (${LANGUAGE_CODE.toUpperCase()})</a></p>`;
 
 				// --- Set Author (as the Comic Series) ---
 				const author = Identity.createWithName(comicTitle);
@@ -112,7 +124,7 @@ function verify() {
 	.then((text) => {
 		// Minimal verification: just check if we got a response
 		const verification = {
-			displayName: "Comick API",
+			displayName: "Comick API (ES)", // Update display name
 			// icon: "URL_TO_COMICK_FAVICON", // Optional: Find a favicon URL
 			baseUrl: COMICK_WEB_URL // Base for relative links if needed elsewhere
 		}
