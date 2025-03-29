@@ -10,7 +10,7 @@ Plugins for the [Tapestry](https://usetapestry.com) by the [Iconfactory](https:/
 
 To install a plugin in the Tapestry app:
 
-1. [Download the latest release](https://github.com/ld3z/tapestry-plugins/releases/latest) of the desired plugin (`fun.comick.tapestry-connector`).
+1. [Download the latest release](https://github.com/ld3z/tapestry-plugins/releases/latest) of the desired plugin.
 2. Save the plugin file in the Files app on your iPhone.
 3. Open Tapestry and add the plugin as a connector through the in-app settings.
 
