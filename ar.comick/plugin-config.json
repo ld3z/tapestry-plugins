@@ -1,0 +1,13 @@
+{
+	"id": "ar.comick",
+	"display_name": "ComicK (AR)",
+	"site": "https://api.comick.fun",
+	"icon": "https://comick.io/_next/image?url=%2Fstatic%2Ficons%2Funicorn-64.png&w=144&q=75",
+	"ui_config": "ui-config.json",
+	"service_name": "ComicK",
+	"item_style": "post",
+	"version": 1,
+	"provides_attachments": false,
+	"default_color": "green",
+	"check_interval": 900
+} 
