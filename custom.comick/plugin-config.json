@@ -1,13 +1,13 @@
 {
 	"id": "custom.comick",
 	"display_name": "ComicK (Custom)",
-	"site": "https://api.comick.fun", // Base API URL
+	"site": "https://api.comick.fun",
 	"icon": "https://comick.io/_next/image?url=%2Fstatic%2Ficons%2Funicorn-64.png&w=144&q=75",
 	"ui_config": "ui-config.json",
 	"service_name": "ComicK Custom",
 	"item_style": "post",
 	"version": 1,
 	"provides_attachments": false,
-	"default_color": "purple", // Different color for distinction
-	"check_interval": 900 // 15 minutes
+	"default_color": "purple",
+	"check_interval": 900
 } 
