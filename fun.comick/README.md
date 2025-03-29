@@ -4,7 +4,7 @@ It fetches recently released chapters across various series available on the pla
 
 **Configuration:**
 
-*   **Select Language:** Choose the desired language for chapter updates from the dropdown list during feed setup.
+*   **Select Language Code:** Choose the desired language *code* (e.g., `en`, `es`, `ja`, `pt_br`) for chapter updates from the dropdown list during feed setup. The list contains the codes used by the Comick API.
 *   **Include NSFW Content:** Use the toggle in the feed settings to include or exclude chapters marked as NSFW/Erotic by the API.
 
 *Note: This connector relies on the public Comick API. Functionality may change based on API availability and structure.*
