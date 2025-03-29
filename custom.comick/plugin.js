@@ -43,11 +43,11 @@ async function fetchComicHid(slug) {
 }
 
 // --- Helper: Fetch Chapters for a Comic HID ---
-// Assumes API endpoint: /comic/:hid/chapters?lang=...&limit=...&page=1&order=new
+// Assumes API endpoint: /comic/:hid/chapters?lang=...&limit=...&page=1
 async function fetchChaptersForHid(hid, lang, limit) {
 	// API uses hyphenated language codes
 	const apiLangCode = lang.replace('_', '-');
-	const endpoint = `${site}/comic/${hid}/chapters?lang=${apiLangCode}&limit=${limit}&page=1&order=new&accept_erotic_content=${includeNsfwContent}`;
+	const endpoint = `${site}/comic/${hid}/chapters?lang=${apiLangCode}&limit=${limit}&page=1`;
 	console.log(`Fetching chapters for HID: ${hid}, Lang: ${apiLangCode} from ${endpoint}`);
 	try {
 		const text = await sendRequest(endpoint);
@@ -97,18 +97,34 @@ function load() {
 		return Promise.all(chapterPromises);
 	})
 	.then(chaptersArrays => {
-		// 3. Combine, sort, and limit chapters
-		const allChapters = chaptersArrays.flat(); // Flatten array of arrays
+		// 3. Combine, filter duplicates, sort, and limit chapters
+		const allChaptersRaw = chaptersArrays.flat(); // Flatten array of arrays
+
+		// --- Remove Duplicates based on chapter HID ---
+		const seenChapterHids = new Set();
+		const uniqueChapters = allChaptersRaw.filter(chapter => {
+			if (!chapter || !chapter.hid) {
+				console.log("Filtering out chapter with missing data.");
+				return false; // Filter out chapters without an HID
+			}
+			if (seenChapterHids.has(chapter.hid)) {
+				console.log(`Filtering out duplicate chapter HID: ${chapter.hid}`);
+				return false; // Already seen this chapter HID
+			}
+			seenChapterHids.add(chapter.hid);
+			return true; // Keep this chapter
+		});
+		console.log(`Found ${uniqueChapters.length} unique chapters after filtering duplicates.`);
 
 		// Sort by creation date, newest first
-		allChapters.sort((a, b) => {
+		uniqueChapters.sort((a, b) => {
 			const dateA = new Date(a.created_at || 0);
 			const dateB = new Date(b.created_at || 0);
 			return dateB - dateA;
 		});
 
 		// Filter out potential future-dated chapters and take the top N overall
-		const finalChapters = allChapters
+		const finalChapters = uniqueChapters
 			.filter(chapter => {
 				const chapterDate = new Date(chapter.created_at || 0);
 				return chapterDate <= now;
