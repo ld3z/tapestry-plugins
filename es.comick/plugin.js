@@ -11,11 +11,14 @@ const includeNsfwContent = typeof include_nsfw === 'boolean' ? include_nsfw : fa
 function load() {
 	// Fetch the latest 40 chapters for the specified language
 	// NOTE: Based on assumptions about the Comick API endpoint and parameters
-	// Added lang parameter and accept_mature_content parameter to the endpoint
-	// Assuming 'accept_mature_content=true' includes NSFW, 'false' excludes it.
-	const endpoint = `${site}/chapter?order=new&page=1&limit=40&lang=${LANGUAGE_CODE}&accept_mature_content=${includeNsfwContent}`;
+	// Added lang parameter and accept_erotic_content parameter to the endpoint
+	// Assuming 'accept_erotic_content=true' includes NSFW, 'false' excludes it.
+	const endpoint = `${site}/chapter?order=new&page=1&limit=40&lang=${LANGUAGE_CODE}&accept_erotic_content=${includeNsfwContent}`;
 
 	console.log("Requesting endpoint: " + endpoint); // Log the final endpoint for debugging
+
+	// Get the current time to filter out future-dated chapters
+	const now = new Date();
 
 	sendRequest(endpoint)
 	.then((text) => {
@@ -71,13 +74,21 @@ function load() {
 					continue; // Skip if essential chapter data is missing
 				}
 
+				// --- Check Release Date ---
+				const date = new Date(chapterDateStr);
+				if (date > now) {
+					// If the chapter's date is in the future, skip it for now.
+					// It will be picked up on a later refresh after it's released.
+					console.log(`Skipping future-dated chapter: ${chapterHid} scheduled for ${date.toISOString()}`);
+					continue;
+				}
+
 				// --- Construct URLs ---
 				// Use the LANGUAGE_CODE constant in the chapter URI
 				const chapterUri = `${COMICK_WEB_URL}/comic/${comicSlug}/${chapterHid}-chapter-${chapterNum}-${LANGUAGE_CODE}`; // Unique URI for the item
 				const comicUri = `${COMICK_WEB_URL}/comic/${comicSlug}`; // Link for the author/series
 
 				// --- Create Tapestry Item ---
-				const date = new Date(chapterDateStr);
 				const item = Item.createWithUriDate(chapterUri, date);
 
 				// --- Set Title ---
