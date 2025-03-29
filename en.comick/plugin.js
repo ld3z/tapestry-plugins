@@ -1,26 +1,22 @@
- // The base URL for the Comick website (used for constructing links)
+// The base URL for the Comick website (used for constructing links)
 const COMICK_WEB_URL = "https://comick.io";
 // The base URL for the API is automatically provided as the 'site' variable
 // from plugin-config.json
-
-// --- Language Code is now injected ---
-// The 'language_code' variable will be injected by Tapestry based on ui-config.json
-// Default to 'en' if not provided or invalid (though ui-config should provide a default)
-const selectedLanguageCode = (typeof language_code === 'string' && language_code) ? language_code : "en";
+const LANGUAGE_CODE = "en"; // Define language code
 
 // The 'include_nsfw' variable will be injected by Tapestry based on ui-config.json
 // It defaults to "off" if not set or if ui-config.json is missing.
 // Check if the value is the string "on" for true.
-const includeNsfwContent = (typeof include_nsfw === 'string' && include_nsfw === 'on');
+const includeNsfwContent = (typeof include_nsfw === 'string' && include_nsfw === 'on'); // Updated check
 
 function load() {
 	// Fetch the latest 40 chapters for the specified language
+	// NOTE: Based on assumptions about the Comick API endpoint and parameters
+	// Added lang parameter and accept_erotic_content parameter to the endpoint
+	// Assuming 'accept_erotic_content=true' includes NSFW, 'false' excludes it.
+	const endpoint = `${site}/chapter?order=new&page=1&limit=40&lang=${LANGUAGE_CODE}&accept_erotic_content=${includeNsfwContent}`;
 
-	// *** Use hyphenated code for the API request ***
-	const apiLangCode = selectedLanguageCode.replace('_', '-');
-	const endpoint = `${site}/chapter?order=new&page=1&limit=40&lang=${apiLangCode}&accept_erotic_content=${includeNsfwContent}`;
-
-	console.log(`Requesting endpoint for language ${selectedLanguageCode}: ${endpoint}`); // Log the final endpoint for debugging
+	console.log("Requesting endpoint: " + endpoint); // Log the final endpoint for debugging
 
 	// Get the current time to filter out future-dated chapters
 	const now = new Date();
@@ -36,16 +32,17 @@ function load() {
 		}
 
 		// Assuming the chapters are directly in the root array
+		// Adjust this if the chapters are nested (e.g., jsonObject.data)
 		const chapters = jsonObject;
 
 		if (!Array.isArray(chapters)) {
 			// Check if the response indicates no chapters found for the language
 			if (typeof chapters === 'object' && chapters !== null && Object.keys(chapters).length === 0) {
-				console.log(`No chapters found for language: ${selectedLanguageCode}`);
+				console.log(`No chapters found for language: ${LANGUAGE_CODE}`);
 				processResults([]); // Process empty results if no chapters found
 				return;
 			}
-			processError(new Error(`Unexpected response format from Comick API for language ${selectedLanguageCode}. Expected an array.`));
+			processError(new Error(`Unexpected response format from Comick API for language ${LANGUAGE_CODE}. Expected an array.`));
 			return;
 		}
 
@@ -88,8 +85,8 @@ function load() {
 				}
 
 				// --- Construct URLs ---
-				// *** Use hyphenated code for the chapter URI ***
-				const chapterUri = `${COMICK_WEB_URL}/comic/${comicSlug}/${chapterHid}-chapter-${chapterNum}-${apiLangCode}`; // Unique URI for the item
+				// Use the LANGUAGE_CODE constant in the chapter URI
+				const chapterUri = `${COMICK_WEB_URL}/comic/${comicSlug}/${chapterHid}-chapter-${chapterNum}-${LANGUAGE_CODE}`; // Unique URI for the item
 				const comicUri = `${COMICK_WEB_URL}/comic/${comicSlug}`; // Link for the author/series
 
 				// --- Create Tapestry Item ---
@@ -106,12 +103,12 @@ function load() {
 				if (chapterTitle) {
 					displayTitle += `: ${chapterTitle}`;
 				}
-				// *** Add language identifier (using original code) to title for clarity ***
-				item.title = `${displayTitle} [${selectedLanguageCode.toUpperCase()}]`;
+				// Add language identifier to title for clarity
+				item.title = `${displayTitle} [${LANGUAGE_CODE.toUpperCase()}]`;
 
 				// --- Set Body ---
-				// *** Use language identifier (using original code) in the link text ***
-				item.body = `<p>New chapter released: <a href="${chapterUri}">Read ${comicTitle} Chapter ${chapterNum} (${selectedLanguageCode.toUpperCase()})</a></p>`;
+				// Use the LANGUAGE_CODE constant in the link text
+				item.body = `<p>New chapter released: <a href="${chapterUri}">Read ${comicTitle} Chapter ${chapterNum} (${LANGUAGE_CODE.toUpperCase()})</a></p>`;
 
 				// --- Set Author (as the Comic Series) ---
 				const author = Identity.createWithName(comicTitle);
@@ -145,7 +142,7 @@ function verify() {
 	.then((text) => {
 		// Minimal verification: just check if we got a response
 		const verification = {
-			displayName: "Comick API", // Generic name
+			displayName: "Comick API (EN)", // Update display name
 			// icon: "URL_TO_COMICK_FAVICON", // Optional: Find a favicon URL
 			baseUrl: COMICK_WEB_URL // Base for relative links if needed elsewhere
 		}
@@ -155,4 +152,4 @@ function verify() {
 		processError(requestError);
 	});
 }
-*/
+*/ 
