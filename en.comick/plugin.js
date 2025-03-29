@@ -4,11 +4,18 @@ const COMICK_WEB_URL = "https://comick.io";
 // from plugin-config.json
 const LANGUAGE_CODE = "en"; // Define language code
 
+// The 'include_nsfw' variable will be injected by Tapestry based on ui-config.json
+// It defaults to false if not set or if ui-config.json is missing.
+const includeNsfwContent = typeof include_nsfw === 'boolean' ? include_nsfw : false;
+
 function load() {
 	// Fetch the latest 40 chapters for the specified language
 	// NOTE: Based on assumptions about the Comick API endpoint and parameters
-	// Added lang parameter to the endpoint
-	const endpoint = `${site}/chapter?order=new&page=1&limit=40&lang=${LANGUAGE_CODE}`;
+	// Added lang parameter and accept_mature_content parameter to the endpoint
+	// Assuming 'accept_mature_content=true' includes NSFW, 'false' excludes it.
+	const endpoint = `${site}/chapter?order=new&page=1&limit=40&lang=${LANGUAGE_CODE}&accept_mature_content=${includeNsfwContent}`;
+
+	console.log("Requesting endpoint: " + endpoint); // Log the final endpoint for debugging
 
 	sendRequest(endpoint)
 	.then((text) => {

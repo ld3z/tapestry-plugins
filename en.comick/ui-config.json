@@ -1,0 +1,10 @@
+{
+	"inputs": [
+		{
+			"name": "include_nsfw",
+			"type": "boolean",
+			"prompt": "Include NSFW Content",
+			"default_value": false
+		}
+	]
+} 
