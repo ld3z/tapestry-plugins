@@ -2,6 +2,7 @@
 	"id": "en.comick",
 	"display_name": "ComicK (EN)",
 	"site": "https://api.comick.fun",
+	"icon": "https://comick.io/_next/image?url=%2Fstatic%2Ficons%2Funicorn-64.png&w=144&q=75",
 	"service_name": "ComicK",
 	"item_style": "post",
 	"version": 1,
