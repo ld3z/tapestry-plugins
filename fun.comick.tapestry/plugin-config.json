@@ -1,0 +1,11 @@
+{
+	"id": "fun.comick.tapestry",
+	"display_name": "Comick",
+	"site": "https://api.comick.fun",
+	"service_name": "Comick",
+	"item_style": "post",
+	"version": 1,
+	"provides_attachments": false,
+	"default_color": "blue",
+	"check_interval": 900
+} 
