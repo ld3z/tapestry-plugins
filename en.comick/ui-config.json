@@ -2,9 +2,9 @@
 	"inputs": [
 		{
 			"name": "include_nsfw",
-			"type": "boolean",
+			"type": "switch",
 			"prompt": "Include NSFW Content",
-			"default_value": false
+			"default_value": "off"
 		}
 	]
 } 

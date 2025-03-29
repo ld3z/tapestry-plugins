@@ -5,8 +5,9 @@ const COMICK_WEB_URL = "https://comick.io";
 const LANGUAGE_CODE = "es"; // Define language code for Spanish
 
 // The 'include_nsfw' variable will be injected by Tapestry based on ui-config.json
-// It defaults to false if not set or if ui-config.json is missing.
-const includeNsfwContent = typeof include_nsfw === 'boolean' ? include_nsfw : false;
+// It defaults to "off" if not set or if ui-config.json is missing.
+// Check if the value is the string "on" for true.
+const includeNsfwContent = (typeof include_nsfw === 'string' && include_nsfw === 'on'); // Updated check
 
 function load() {
 	// Fetch the latest 40 chapters for the specified language
