@@ -12,6 +12,8 @@ console.log(`[CustomComick] Inputs - Slugs: '${userSlugsRaw}', Lang: ${selectedL
 // --- Constants ---
 const MAX_CHAPTERS_PER_COMIC = 10; // How many latest chapters to fetch per comic initially
 const MAX_RESULTS_TOTAL = 40; // Max items to show in the feed overall
+// Base URL for cover images (adjust if needed)
+const COVER_BASE_URL = "https://meo.comick.pictures";
 
 // --- Helper: Parse Slugs ---
 function parseSlugs(rawSlugs) {
@@ -20,57 +22,69 @@ function parseSlugs(rawSlugs) {
 		.filter(slug => slug !== "");
 }
 
-// --- Helper: Fetch Comic HID from Slug ---
-// Assumes API endpoint: /comic/:slug returns { comic: { hid: "..." } }
-async function fetchComicHid(slug) {
+// --- Helper: Fetch Comic Details (HID, Title, Slug, Cover) from Slug ---
+// Calls the /comic/{slug}/ endpoint
+// Returns an object: { hid, title, slug, coverUrl } or null on error/not found
+async function fetchComicDetails(slug) {
 	const endpoint = `${site}/comic/${encodeURIComponent(slug)}`;
-	console.log(`[CustomComick] Fetching HID for slug: ${slug} from ${endpoint}`);
+	console.log(`[CustomComick] Fetching details for slug: ${slug} from ${endpoint}`);
 	try {
 		const text = await sendRequest(endpoint);
-		// --- Log Raw Response ---
-		// console.log(`[CustomComick] Raw response for slug ${slug}: ${text.substring(0, 500)}...`); // Log first 500 chars
 		const jsonObject = JSON.parse(text);
-		// Adjust path based on actual API response structure
-		if (jsonObject && jsonObject.comic && jsonObject.comic.hid) {
+
+		// Extract required comic details
+		if (jsonObject && jsonObject.comic && jsonObject.comic.hid && jsonObject.comic.title && jsonObject.comic.slug) {
 			const hid = jsonObject.comic.hid;
-			console.log(`[CustomComick] Found HID: ${hid} for slug: ${slug}`);
-			return hid;
+			const title = jsonObject.comic.title;
+			const comicSlug = jsonObject.comic.slug; // Use the slug from the response for consistency
+
+			// Extract cover URL
+			let coverUrl = null;
+			const comicCoverInfo = jsonObject.comic.md_covers?.[0];
+			if (comicCoverInfo && comicCoverInfo.b2key) {
+				coverUrl = `${COVER_BASE_URL}/${comicCoverInfo.b2key}`;
+			}
+
+			console.log(`[CustomComick] Found Details - HID: ${hid}, Title: ${title}, Slug: ${comicSlug}, Cover: ${coverUrl ? 'Yes' : 'No'} for original slug: ${slug}`);
+			return { hid, title, slug: comicSlug, coverUrl }; // Return details object
 		} else {
-			console.log(`[CustomComick] Could not find HID in response for slug: ${slug}. Response structure might be different.`);
-			// console.log(`[CustomComick] Parsed JSON for slug ${slug}:`, JSON.stringify(jsonObject)); // Log full parsed object if needed
-			return null; // Slug might be invalid or API structure changed
+			console.log(`[CustomComick] Could not find essential comic details (hid, title, slug) in response for slug: ${slug}.`);
+			return null;
 		}
 	} catch (error) {
-		console.log(`[CustomComick] Error fetching/parsing HID for slug ${slug}: ${error.message}`);
+		console.log(`[CustomComick] Error fetching/parsing details for slug ${slug}: ${error.message}`);
 		return null;
 	}
 }
 
 // --- Helper: Fetch Chapters for a Comic HID ---
-// Assumes API endpoint: /comic/:hid/chapters?lang=...&limit=...&page=1
+// Calls the /comic/{hid}/chapters endpoint
+// Returns the array of chapter objects from the response
 async function fetchChaptersForHid(hid, lang, limit) {
-	// API uses hyphenated language codes
 	const apiLangCode = lang.replace('_', '-');
 	const endpoint = `${site}/comic/${hid}/chapters?lang=${apiLangCode}&limit=${limit}&page=1`;
 	console.log(`[CustomComick] Fetching chapters for HID: ${hid}, Lang: ${apiLangCode} from ${endpoint}`);
 	try {
 		const text = await sendRequest(endpoint);
-        // --- Log Raw Response ---
-        // console.log(`[CustomComick] Raw response for chapters HID ${hid}: ${text.substring(0, 500)}...`); // Log first 500 chars
 		const jsonObject = JSON.parse(text);
-		// Adjust path based on actual API response structure (e.g., jsonObject.chapters)
+		// Expects { chapters: [...] } structure based on API docs/previous code
+        // If the structure is just the array directly, use: return jsonObject;
 		if (jsonObject && Array.isArray(jsonObject.chapters)) {
 			const chapterCount = jsonObject.chapters.length;
 			console.log(`[CustomComick] Found ${chapterCount} chapters in response for HID: ${hid}`);
-			return jsonObject.chapters;
-		} else {
-			console.log(`[CustomComick] Invalid or empty chapter data structure for HID: ${hid}. Expected { chapters: [...] }.`);
-            // console.log(`[CustomComick] Parsed JSON for chapters HID ${hid}:`, JSON.stringify(jsonObject)); // Log full parsed object if needed
+			return jsonObject.chapters; // Return the array of chapters
+		} else if (Array.isArray(jsonObject)) { // Handle case where response IS the array
+            const chapterCount = jsonObject.length;
+            console.log(`[CustomComick] Found ${chapterCount} chapters (direct array response) for HID: ${hid}`);
+            return jsonObject;
+        }
+        else {
+			console.log(`[CustomComick] Invalid or empty chapter data structure for HID: ${hid}. Expected { chapters: [...] } or direct array.`);
 			return []; // Return empty array if no chapters or bad format
 		}
 	} catch (error) {
 		console.log(`[CustomComick] Error fetching/parsing chapters for HID ${hid}: ${error.message}`);
-		return []; // Return empty on error to allow others to proceed
+		return []; // Return empty on error
 	}
 }
 
@@ -86,43 +100,54 @@ function load() {
 	}
 
 	console.log(`[CustomComick] Processing ${slugs.length} slugs: ${slugs.join(', ')}`);
-	const now = new Date(); // For filtering future chapters
+	const now = new Date();
 	console.log(`[CustomComick] Current time for filtering: ${now.toISOString()}`);
 
-	// 1. Fetch HIDs for all slugs concurrently
-	Promise.all(slugs.map(slug => fetchComicHid(slug)))
-	.then(hids => {
-		const validHids = hids.filter(hid => hid !== null);
-		console.log(`[CustomComick] Fetched HIDs: ${hids.join(', ')}. Valid HIDs: ${validHids.join(', ')}`);
-		if (validHids.length === 0) {
-			// Throw error if NO valid HIDs were found at all
-			throw new Error("Could not find valid comic IDs for any of the provided slugs. Check slugs and API response structure.");
+	// 1. Fetch Comic Details for all slugs concurrently
+	Promise.all(slugs.map(slug => fetchComicDetails(slug)))
+	.then(comicDetailsResults => {
+		// Filter out null results (errors or not found)
+		const validComicDetailsList = comicDetailsResults.filter(details => details !== null);
+		console.log(`[CustomComick] Fetched details for ${validComicDetailsList.length} valid comics.`);
+
+		if (validComicDetailsList.length === 0) {
+			throw new Error("Could not find valid comic details for any provided slugs. Check slugs and API response.");
 		}
-		console.log(`[CustomComick] Fetching chapters for ${validHids.length} valid HIDs.`);
-		// 2. Fetch chapters for all valid HIDs concurrently
-		const chapterPromises = validHids.map(hid =>
-			fetchChaptersForHid(hid, selectedLanguageCode, MAX_CHAPTERS_PER_COMIC)
+
+		// 2. Fetch chapters for each valid comic, passing comic details along
+		const chapterFetchPromises = validComicDetailsList.map(comicDetails =>
+			fetchChaptersForHid(comicDetails.hid, selectedLanguageCode, MAX_CHAPTERS_PER_COMIC)
+				.then(chapters => ({ // Return object containing both details and chapters
+					comicInfo: comicDetails,
+					chapters: chapters
+				}))
+				.catch(error => { // Catch errors fetching chapters for *one* comic
+					console.log(`[CustomComick] Error fetching chapters for HID ${comicDetails.hid} (Slug: ${comicDetails.slug}): ${error.message}`);
+					return { comicInfo: comicDetails, chapters: [] }; // Return empty chapters for this comic
+				})
 		);
-		return Promise.all(chapterPromises);
+		return Promise.all(chapterFetchPromises);
 	})
-	.then(chaptersArrays => {
-		// 3. Combine, filter duplicates, sort, and limit chapters
-		const allChaptersRaw = chaptersArrays.flat(); // Flatten array of arrays
-		console.log(`[CustomComick] Total chapters fetched (before filtering): ${allChaptersRaw.length}`);
+	.then(resultsPerComic => {
+		// resultsPerComic is an array: [{ comicInfo: {...}, chapters: [...] }, ...]
+
+		// 3. Combine chapters from all comics, filter, sort, limit
+		let allChaptersWithInfo = [];
+		resultsPerComic.forEach(result => {
+			result.chapters.forEach(chapter => {
+				// Add comicInfo to each chapter object for easier processing
+				allChaptersWithInfo.push({ ...chapter, comicInfo: result.comicInfo });
+			});
+		});
+		console.log(`[CustomComick] Total chapters fetched (before filtering): ${allChaptersWithInfo.length}`);
 
 		// --- Remove Duplicates based on chapter HID ---
 		const seenChapterHids = new Set();
-		const uniqueChapters = allChaptersRaw.filter(chapter => {
-			if (!chapter || !chapter.hid) {
-				// console.log("[CustomComick] Filtering out chapter with missing HID."); // Less verbose log
-				return false; // Filter out chapters without an HID
-			}
-			if (seenChapterHids.has(chapter.hid)) {
-				// console.log(`[CustomComick] Filtering out duplicate chapter HID: ${chapter.hid}`); // Less verbose log
-				return false; // Already seen this chapter HID
-			}
+		const uniqueChapters = allChaptersWithInfo.filter(chapter => {
+			if (!chapter || !chapter.hid) return false;
+			if (seenChapterHids.has(chapter.hid)) return false;
 			seenChapterHids.add(chapter.hid);
-			return true; // Keep this chapter
+			return true;
 		});
 		console.log(`[CustomComick] Chapters after duplicate filtering: ${uniqueChapters.length}`);
 
@@ -130,71 +155,65 @@ function load() {
 		uniqueChapters.sort((a, b) => {
 			const dateA = new Date(a.created_at || 0);
 			const dateB = new Date(b.created_at || 0);
-			return dateB - dateA; // Newest first
+			return dateB - dateA;
 		});
 
-		// Filter out potential future-dated chapters and take the top N overall
+		// Filter out future-dated chapters and limit total
 		const chaptersBeforeDateFilter = uniqueChapters.length;
 		const finalChapters = uniqueChapters
 			.filter(chapter => {
-				if (!chapter.created_at) return false; // Need a date to compare
+				if (!chapter.created_at) return false;
 				const chapterDate = new Date(chapter.created_at);
-				const isFuture = chapterDate > now;
-				// if (isFuture) console.log(`[CustomComick] Filtering future chapter ${chapter.hid} (${chapterDate.toISOString()})`); // Log if needed
-				return !isFuture;
+				return chapterDate <= now; // Keep only chapters not in the future
 			})
 			.slice(0, MAX_RESULTS_TOTAL);
 		console.log(`[CustomComick] Chapters after date filtering (${chaptersBeforeDateFilter} -> ${finalChapters.length}). Sliced to max ${MAX_RESULTS_TOTAL}.`);
 
 		// 4. Process into Tapestry Items
-		let results = [];
+		let tapestryItems = [];
 		console.log(`[CustomComick] Processing ${finalChapters.length} chapters into Tapestry items.`);
 		for (const chapterData of finalChapters) {
 			try {
-				// --- Extract Data (similar to fun.comick, add checks) ---
+				// --- Extract Data ---
 				const chapterHid = chapterData.hid;
-				// Basic check - already filtered non-HID chapters, but good practice
 				if (!chapterHid) {
                     console.log("[CustomComick] Skipping item - chapterData missing hid unexpectedly.");
                     continue;
                 }
+                // Use the comicInfo attached earlier
+                const comicInfo = chapterData.comicInfo;
+                 if (!comicInfo || !comicInfo.slug || !comicInfo.title) {
+                     // This shouldn't happen if filtering worked, but good safety check
+                     console.log(`[CustomComick] Skipping chapter ${chapterHid} due to missing associated comicInfo.`);
+                     continue;
+                 }
 
 				const chapterDateStr = chapterData.created_at;
-				const chapterDate = chapterDateStr ? new Date(chapterDateStr) : new Date(0); // Use epoch if date missing
+				const chapterDate = chapterDateStr ? new Date(chapterDateStr) : new Date(0);
 
-				// Use chapter number and volume if available, fallback title
 				let displayChapterNum = `Ch. ${chapterData.chap || '?'}`;
 				if (chapterData.vol) {
 					displayChapterNum = `Vol. ${chapterData.vol} ${displayChapterNum}`;
 				}
-				const chapterTitle = chapterData.title ? `: ${chapterData.title}` : ""; // Add title if present
+				const chapterTitle = chapterData.title ? `: ${chapterData.title}` : "";
 
-				// Comic info should be present in chapter data
-				const comicInfo = chapterData.md_comics;
-                 if (!comicInfo || !comicInfo.slug || !comicInfo.title) {
-                     console.log(`[CustomComick] Skipping chapter ${chapterHid} due to missing md_comics info (slug or title).`);
-                     continue; // Skip if essential comic data is missing
-                 }
+				// Use comic info from the stored comicInfo object
 				const comicSlug = comicInfo.slug;
 				const comicTitle = comicInfo.title;
 				const comicUri = `${COMICK_WEB_URL}/comic/${comicSlug}`;
+                const comicCoverUrl = comicInfo.coverUrl; // Use stored cover URL
 
-				// Construct chapter URI - Ensure this is unique and correct format
-                // Example: https://comick.io/comic/solo-leveling/XnY7z-chapter-1-en
+				// Construct chapter URI
 				const apiLangCode = selectedLanguageCode.replace('_','-');
 				const chapterUri = `${comicUri}/${chapterHid}-chapter-${chapterData.chap || '0'}-${apiLangCode}`;
 
-				// Cover image
-				const coverInfo = chapterData.md_covers?.[0]; // Chapter specific cover?
-                const comicCoverInfo = comicInfo.md_covers?.[0]; // Comic cover?
-				const coverUrl = coverInfo ? `https://meo.comick.pictures/${coverInfo.b2key}` : (comicCoverInfo ? `https://meo.comick.pictures/${comicCoverInfo.b2key}`: null);
-
 				// --- Create Tapestry Item ---
 				const item = Item.createWithUriDate(chapterUri, chapterDate);
-
-				// --- Set Body ---
 				item.body = `${displayChapterNum}${chapterTitle}`;
-				// Optionally add group info if available: chapterData.group_name?.[0]
+				// Optionally add group info:
+                // if (Array.isArray(chapterData.group_name) && chapterData.group_name.length > 0) {
+                //     item.body += `\nGroup: ${chapterData.group_name.join(', ')}`;
+                // }
 
 				// --- Set Title (Comic Title) ---
 				item.title = comicTitle;
@@ -202,29 +221,28 @@ function load() {
 				// --- Set Author (as the Comic Series) ---
 				const author = Identity.createWithName(comicTitle);
 				author.uri = comicUri;
-				if (coverUrl) {
-					author.avatar = coverUrl;
+				if (comicCoverUrl) { // Use the cover URL fetched with comic details
+					author.avatar = comicCoverUrl;
 				}
 				item.author = author;
 
-				results.push(item);
+				tapestryItems.push(item);
 
 			} catch (e) {
-				// Log error for a specific item but continue processing others
 				console.log(`[CustomComick] Error processing chapter item: ${chapterData?.hid || 'Unknown'} - ${e.message} - Stack: ${e.stack}`);
 			}
 		}
-		console.log(`[CustomComick] Calling processResults with ${results.length} items.`);
-		processResults(results); // Pass final array to Tapestry
+		console.log(`[CustomComick] Calling processResults with ${tapestryItems.length} items.`);
+		processResults(tapestryItems);
 	})
 	.catch(error => {
-		// Handle errors from fetching HIDs or chapters or the "No valid IDs" error
+		// Handle errors from fetching comic details or the main promise chain
 		console.log("[CustomComick] Caught error in main promise chain.");
-		processError(error); // Report error to Tapestry
+		processError(error);
 	});
 }
 
-// Optional: Implement verify() if needed for this connector
+// Optional: Implement verify() if needed
 /*
 function verify() {
     // ...
