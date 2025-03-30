@@ -1,0 +1,12 @@
+{
+	"id": "com.xkcd",
+	"display_name": "XKCD",
+	"site": "https://xkcd.com",
+	"icon": "https://xkcd.com/s/0b7742.png",
+	"service_name": "XKCD",
+	"item_style": "post",
+	"version": 1,
+	"provides_attachments": false,
+	"default_color": "slate",
+	"check_interval": 3600
+} 
