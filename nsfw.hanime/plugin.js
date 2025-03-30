@@ -1,4 +1,5 @@
 // Hanime Connector for Tapestry
+// NOTE: Using Regex because Tapestry environment lacks DOM parsing (querySelector, etc.)
 
 const HANIME_BASE_URL = "https://hanime.tv";
 
@@ -10,10 +11,16 @@ function load() {
 		// --- Use Regex to find video items ---
 		// This regex attempts to find the item container and capture the href, src, and title.
 		// It looks for elements with classes containing 'item', 'no-touch', 'hv-thumbnail', and 'hv-title'.
-		// NOTE: This regex is based on the selectors in the original code and might need
-		// adjustment if the actual Hanime.tv HTML structure is different or changes.
-		// It assumes a structure like: <div class="...item..."> ... <a href="..."> ... <img src="..."> ... <div class="hv-title">TITLE</div> ... </div>
-		const videoItemRegex = /<div class="[^"]*item[^"]*">.*?<a class="[^"]*no-touch[^"]*" href="([^"]*)".*?<img class="[^"]*hv-thumbnail[^"]*" src="([^"]*)".*?<div class="hv-title.*?>(.*?)<\/div>.*?<\/div>/gis;
+		// Based on site inspection (as of late 2023/early 2024), the structure might be different.
+		// This regex is kept as a starting point but likely needs adjustment based on actual fetched HTML.
+		// Example target structure (might be outdated):
+		// <a href="/videos/hentai/..." class="...no-touch...">
+		//  <img class="...hv-thumbnail..." src="...">
+		//  <div class="hv-title">...TITLE...</div>
+		// </a>
+		// A more robust regex might target the <a> tag directly if it contains everything.
+		const videoItemRegex = /<a[^>]*?class="[^"]*?no-touch[^"]*?"[^>]*?href="([^"]*)"[^>]*?>.*?<img[^>]*?class="[^"]*?hv-thumbnail[^"]*?"[^>]*?src="([^"]*)"[^>]*?>.*?<div[^>]*?class="[^"]*?hv-title[^"]*?"[^>]*?>(.*?)<\/div>.*?<\/a>/gis;
+
 
 		const results = [];
 		let match;
@@ -24,8 +31,8 @@ function load() {
 			processedCount++;
 			try {
 				// Extract captured groups:
-				// match[1]: href attribute value
-				// match[2]: src attribute value
+				// match[1]: href attribute value (relative path)
+				// match[2]: src attribute value (thumbnail URL)
 				// match[3]: title text content (might include surrounding whitespace or tags, needs cleanup)
 
 				const relativeVideoPath = match[1];
@@ -38,24 +45,23 @@ function load() {
 					continue; // continue to next match
 				}
 
-				const videoUri = new URL(relativeVideoPath, HANIME_BASE_URL).href; // Ensure absolute URL
+				// Ensure URLs are absolute
+				const videoUri = new URL(relativeVideoPath, HANIME_BASE_URL).href;
+				// Cover URL might already be absolute, but resolve just in case
+				const absoluteCoverUrl = new URL(coverUrl, HANIME_BASE_URL).href;
 
 				// --- Create Tapestry Item (without specific date) ---
-				// Tapestry will use the fetch time for ordering
-				const item = Item.createWithUri(videoUri); // Use createWithUri since we don't have a specific date
+				const item = Item.createWithUri(videoUri);
 
 				// --- Set Title ---
 				item.title = title;
 
 				// --- Set Body ---
-				// Include the cover image and a link to the video.
-				// Since provides_attachments is likely false (default), Tapestry should show the image.
-				item.body = `<p><a href="${videoUri}"><img src="${coverUrl}" alt="${title}" /></a></p><p><a href="${videoUri}">Watch: ${title}</a></p>`;
+				item.body = `<p><a href="${videoUri}"><img src="${absoluteCoverUrl}" alt="${title}" /></a></p><p><a href="${videoUri}">Watch: ${title}</a></p>`;
 
 				// --- Set Author ---
 				const author = Identity.createWithName("Hanime");
 				author.uri = HANIME_BASE_URL;
-				// author.avatar = "URL_TO_HANIME_LOGO_IF_AVAILABLE"; // Optional: Add if you find a good logo URL
 				item.author = author;
 
 				results.push(item);
@@ -67,11 +73,12 @@ function load() {
 		} // end while loop
 
 		if (processedCount === 0) {
-			console.log("No video items matching the regex pattern found on the page.");
-			// It's possible the structure changed or the initial fetch didn't contain the expected carousel.
-			// Consider if this should be an error or just an empty result.
-			// processError(new Error("Could not find any video items matching the expected pattern."));
-			processResults([]); // Sending empty results might be preferable.
+			console.log("No video items matching the regex pattern found in the fetched HTML.");
+			// This could be due to:
+			// 1. Regex pattern mismatch with actual HTML structure.
+			// 2. Content being loaded dynamically via JavaScript (not present in initial HTML).
+			// 3. Site structure changed significantly.
+			processResults([]); // Send empty results
 			return;
 		}
 
