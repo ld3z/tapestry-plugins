@@ -6,8 +6,7 @@ console.log(`[CustomComick] Initializing. Site: ${site}`);
 // --- User Inputs (Injected by Tapestry) ---
 const userSlugsRaw = (typeof comic_slugs === 'string') ? comic_slugs : "";
 const selectedLanguageCode = (typeof language_code === 'string' && language_code) ? language_code : "en";
-const includeNsfwContent = (typeof include_nsfw === 'string' && include_nsfw === 'on');
-console.log(`[CustomComick] Inputs - Slugs: '${userSlugsRaw}', Lang: ${selectedLanguageCode}, NSFW: ${includeNsfwContent}`);
+console.log(`[CustomComick] Inputs - Slugs: '${userSlugsRaw}', Lang: ${selectedLanguageCode}`);
 
 // --- Constants ---
 const MAX_CHAPTERS_PER_COMIC = 10; // How many latest chapters to fetch per comic initially
