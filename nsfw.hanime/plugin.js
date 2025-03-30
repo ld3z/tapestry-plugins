@@ -8,6 +8,23 @@ function load() {
 
 	sendRequest(HANIME_BASE_URL)
 	.then((htmlText) => {
+		// --- DEBUGGING: Log received HTML ---
+		console.log("Received HTML length: " + htmlText.length);
+		if (htmlText.length > 0) {
+			console.log("Received HTML (first 1000 chars): " + htmlText.substring(0, 1000));
+			// Check for keywords expected in the HTML structure for videos
+			console.log("HTML contains 'hv-thumbnail' class?: " + htmlText.includes('hv-thumbnail'));
+			console.log("HTML contains 'hv-title' class?: " + htmlText.includes('hv-title'));
+			console.log("HTML contains 'no-touch' class?: " + htmlText.includes('no-touch'));
+			console.log("HTML contains '/videos/hentai/' link pattern?: " + htmlText.includes('/videos/hentai/'));
+		} else {
+			console.log("Received empty HTML response.");
+			processError(new Error("Received empty HTML response from Hanime.tv"));
+			return;
+		}
+		// --- END DEBUGGING ---
+
+
 		// --- Use Regex to find video items ---
 		// This regex attempts to find the item container and capture the href, src, and title.
 		// It looks for elements with classes containing 'item', 'no-touch', 'hv-thumbnail', and 'hv-title'.
@@ -78,6 +95,7 @@ function load() {
 			// 1. Regex pattern mismatch with actual HTML structure.
 			// 2. Content being loaded dynamically via JavaScript (not present in initial HTML).
 			// 3. Site structure changed significantly.
+			// Logged HTML snippet above might give clues.
 			processResults([]); // Send empty results
 			return;
 		}
