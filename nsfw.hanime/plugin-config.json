@@ -2,7 +2,7 @@
 	"id": "nsfw.hanime",
 	"display_name": "Hanime",
 	"site": "https://hanime.tv",
-	"icon": "https://hanime.tv/favicon.ico",
+	"icon": "https://hanime.tv/favicon.png",
 	"service_name": "Hanime",
 	"item_style": "post",
 	"version": 1,

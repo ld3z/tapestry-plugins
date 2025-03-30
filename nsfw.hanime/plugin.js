@@ -4,108 +4,88 @@
 const HANIME_BASE_URL = "https://hanime.tv";
 
 function load() {
-	console.log("Fetching Hanime homepage...");
+	console.log("Hanime Plugin: load() function called.");
+	const targetUrl = HANIME_BASE_URL; 
 
-	sendRequest(HANIME_BASE_URL)
-	.then((htmlText) => {
-		// --- DEBUGGING: Log received HTML ---
-		console.log("Received HTML length: " + htmlText.length);
-		if (htmlText.length > 0) {
-			console.log("Received HTML (first 1000 chars): " + htmlText.substring(0, 1000));
-			// Check for keywords expected in the HTML structure for videos
-			console.log("HTML contains 'hv-thumbnail' class?: " + htmlText.includes('hv-thumbnail'));
-			console.log("HTML contains 'hv-title' class?: " + htmlText.includes('hv-title'));
-			console.log("HTML contains 'no-touch' class?: " + htmlText.includes('no-touch'));
-			console.log("HTML contains '/videos/hentai/' link pattern?: " + htmlText.includes('/videos/hentai/'));
-		} else {
-			console.log("Received empty HTML response.");
-			processError(new Error("Received empty HTML response from Hanime.tv"));
-			return;
-		}
-		// --- END DEBUGGING ---
+	try {
+		console.log("Hanime Plugin: Attempting sendRequest to " + targetUrl);
+		sendRequest(targetUrl)
+		.then((htmlText) => {
+			console.log("Hanime Plugin: sendRequest succeeded.");
+			// --- THIS IS THE CRUCIAL LOG ---
+			console.log("Hanime Plugin: Response start (first 500 chars): " + htmlText?.substring(0, 500)); 
+			// --- END CRUCIAL LOG ---
 
+			// Now try the regex on the received text
+			const videoItemRegex = /<a[^>]*?class="[^"]*?no-touch[^"]*?"[^>]*?href="([^"]*)"[^>]*?>.*?<img[^>]*?class="[^"]*?hv-thumbnail[^"]*?"[^>]*?src="([^"]*)"[^>]*?>.*?<div[^>]*?class="[^"]*?hv-title[^"]*?"[^>]*?>(.*?)<\/div>.*?<\/a>/gis;
+			const results = [];
+			let match;
+			let processedCount = 0;
 
-		// --- Use Regex to find video items ---
-		// This regex attempts to find the item container and capture the href, src, and title.
-		// It looks for elements with classes containing 'item', 'no-touch', 'hv-thumbnail', and 'hv-title'.
-		// Based on site inspection (as of late 2023/early 2024), the structure might be different.
-		// This regex is kept as a starting point but likely needs adjustment based on actual fetched HTML.
-		// Example target structure (might be outdated):
-		// <a href="/videos/hentai/..." class="...no-touch...">
-		//  <img class="...hv-thumbnail..." src="...">
-		//  <div class="hv-title">...TITLE...</div>
-		// </a>
-		// A more robust regex might target the <a> tag directly if it contains everything.
-		const videoItemRegex = /<a[^>]*?class="[^"]*?no-touch[^"]*?"[^>]*?href="([^"]*)"[^>]*?>.*?<img[^>]*?class="[^"]*?hv-thumbnail[^"]*?"[^>]*?src="([^"]*)"[^>]*?>.*?<div[^>]*?class="[^"]*?hv-title[^"]*?"[^>]*?>(.*?)<\/div>.*?<\/a>/gis;
+			while ((match = videoItemRegex.exec(htmlText)) !== null) {
+				processedCount++;
+				try {
+					// Extract captured groups:
+					// match[1]: href attribute value (relative path)
+					// match[2]: src attribute value (thumbnail URL)
+					// match[3]: title text content (might include surrounding whitespace or tags, needs cleanup)
 
+					const relativeVideoPath = match[1];
+					const coverUrl = match[2];
+					// Clean up the title: remove potential HTML tags and trim whitespace
+					const title = match[3].replace(/<[^>]*>/g, '').trim();
 
-		const results = [];
-		let match;
-		let processedCount = 0;
+					if (!relativeVideoPath || !title || !coverUrl) {
+						console.log(`Skipping item match ${processedCount}: Missing data.`);
+						continue; // continue to next match
+					}
 
-		// Loop through all matches found in the HTML
-		while ((match = videoItemRegex.exec(htmlText)) !== null) {
-			processedCount++;
-			try {
-				// Extract captured groups:
-				// match[1]: href attribute value (relative path)
-				// match[2]: src attribute value (thumbnail URL)
-				// match[3]: title text content (might include surrounding whitespace or tags, needs cleanup)
+					// Ensure URLs are absolute
+					const videoUri = new URL(relativeVideoPath, HANIME_BASE_URL).href;
+					// Cover URL might already be absolute, but resolve just in case
+					const absoluteCoverUrl = new URL(coverUrl, HANIME_BASE_URL).href;
 
-				const relativeVideoPath = match[1];
-				const coverUrl = match[2];
-				// Clean up the title: remove potential HTML tags and trim whitespace
-				const title = match[3].replace(/<[^>]*>/g, '').trim();
+					// --- Create Tapestry Item (without specific date) ---
+					const item = Item.createWithUri(videoUri);
 
-				if (!relativeVideoPath || !title || !coverUrl) {
-					console.log(`Skipping item match ${processedCount}: Missing href, title text, or image src attribute.`);
-					continue; // continue to next match
+					// --- Set Title ---
+					item.title = title;
+
+					// --- Set Body ---
+					item.body = `<p><a href="${videoUri}"><img src="${absoluteCoverUrl}" alt="${title}" /></a></p><p><a href="${videoUri}">Watch: ${title}</a></p>`;
+
+					// --- Set Author ---
+					const author = Identity.createWithName("Hanime");
+					author.uri = HANIME_BASE_URL;
+					item.author = author;
+
+					results.push(item);
+
+				} catch (e) {
+					console.log(`Error processing video item match ${processedCount}: ${e.message}`);
+					// Continue processing other items
 				}
+			} // end while loop
 
-				// Ensure URLs are absolute
-				const videoUri = new URL(relativeVideoPath, HANIME_BASE_URL).href;
-				// Cover URL might already be absolute, but resolve just in case
-				const absoluteCoverUrl = new URL(coverUrl, HANIME_BASE_URL).href;
-
-				// --- Create Tapestry Item (without specific date) ---
-				const item = Item.createWithUri(videoUri);
-
-				// --- Set Title ---
-				item.title = title;
-
-				// --- Set Body ---
-				item.body = `<p><a href="${videoUri}"><img src="${absoluteCoverUrl}" alt="${title}" /></a></p><p><a href="${videoUri}">Watch: ${title}</a></p>`;
-
-				// --- Set Author ---
-				const author = Identity.createWithName("Hanime");
-				author.uri = HANIME_BASE_URL;
-				item.author = author;
-
-				results.push(item);
-
-			} catch (e) {
-				console.log(`Error processing video item match ${processedCount}: ${e.message}`);
-				// Continue processing other items
+			if (processedCount === 0) {
+				console.log("Hanime Plugin: No matches found by regex in the received response.");
+			} else {
+				console.log(`Hanime Plugin: Processed ${results.length} items from ${processedCount} regex matches.`);
 			}
-		} // end while loop
+			processResults(results);
 
-		if (processedCount === 0) {
-			console.log("No video items matching the regex pattern found in the fetched HTML.");
-			// This could be due to:
-			// 1. Regex pattern mismatch with actual HTML structure.
-			// 2. Content being loaded dynamically via JavaScript (not present in initial HTML).
-			// 3. Site structure changed significantly.
-			// Logged HTML snippet above might give clues.
-			processResults([]); // Send empty results
-			return;
-		}
+		})
+		.catch((requestError) => {
+			console.error("Hanime Plugin: sendRequest failed: " + requestError?.message);
+			processError(requestError); 
+		});
+		console.log("Hanime Plugin: sendRequest promise initiated.");
+	} catch (e) {
+		console.error("Hanime Plugin: Error within load() function before promise: " + e?.message);
+		processError(new Error("Hanime Plugin: Sync error in load(): " + e?.message));
+	}
+}
 
-		console.log(`Successfully processed ${results.length} Hanime items out of ${processedCount} potential matches.`);
-		processResults(results);
-
-	})
-	.catch((requestError) => {
-		console.log("Error fetching Hanime.tv: " + requestError.message);
-		processError(requestError);
-	});
-} 
+// Add initial logs to ensure script loads
+console.log("Hanime Plugin: Script loaded.");
+console.log("Hanime Plugin: Script finished parsing."); 
