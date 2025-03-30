@@ -3,7 +3,7 @@
 const XKCD_API_LATEST = "https://xkcd.com/info.0.json";
 const XKCD_API_SPECIFIC = (num) => `https://xkcd.com/${num}/info.0.json`; // Function to generate specific comic URL
 const XKCD_WEB_URL_BASE = "https://xkcd.com";
-const NUM_COMICS_TO_FETCH = 25; // How many latest comics to fetch
+const NUM_COMICS_TO_FETCH = 10; // How many latest comics to fetch
 
 // Helper function to create an Item from comic data
 function createTapestryItem(comicData) {
