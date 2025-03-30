@@ -1,0 +1,18 @@
+{
+    "inputs": [
+        {
+            "name": "service",
+            "type": "choices",
+            "prompt": "Service",
+            "value": "patreon",
+            "choices": "patreon,fanbox,fantia,gumroad,subscribestar,dlsite,discord,boosty",
+            "placeholder": "Select the service (e.g., patreon)"
+        },
+        {
+            "name": "creator_id",
+            "type": "text",
+            "prompt": "Creator ID",
+            "placeholder": "Enter the creator's ID number"
+        }
+    ]
+} 

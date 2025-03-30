@@ -1,0 +1,13 @@
+{
+    "id": "su.kemono.creator",
+    "display_name": "Kemono Creator Posts",
+    "service_name": "Kemono",
+    "version": 1,
+    "item_style": "post",
+    "default_color": "slate",
+    "icon": "https://kemono.su/static/favicon.ico",
+    "site": "https://kemono.su",
+    "needs_verification": true,
+    "verify_variables": true,
+    "provides_attachments": true
+} 

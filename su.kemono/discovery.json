@@ -1,0 +1,20 @@
+{
+  "sites": [
+    "kemono.su"
+  ],
+  "url": [
+    {
+      "extract": "/kemono\\.su/([a-z]+)/user/([0-9]+)/?",
+      "variable": "service, creator_id"
+    }
+  ],
+  "html": [
+     {
+       "element": "meta",
+       "check": "property",
+       "match": "og:site_name",
+       "use": "content",
+       "extract": "/Kemono/"
+     }
+  ]
+} 
