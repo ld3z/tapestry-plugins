@@ -1,0 +1,12 @@
+{
+	"id": "com.hanime",
+	"display_name": "Hanime",
+	"site": "https://hanime.tv",
+	"icon": "https://hanime.tv/favicon.ico",
+	"service_name": "Hanime",
+	"item_style": "post",
+	"version": 1,
+	"provides_attachments": false,
+	"default_color": "gold",
+	"check_interval": 7200
+} 

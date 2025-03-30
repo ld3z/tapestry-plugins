@@ -7,6 +7,7 @@ Plugins for the [Tapestry](https://usetapestry.com) by the [Iconfactory](https:/
 | [fun.comick](https://github.com/ld3z/tapestry-plugins/tree/main/fun.comick) | Shows latest chapters uploaded to Comick for a selected language |
 | [custom.comick](https://github.com/ld3z/tapestry-plugins/tree/main/custom.comick) | Shows latest chapters for a custom list of specific Comick comics |
 | [com.xkcd](https://github.com/ld3z/tapestry-plugins/tree/main/com.xkcd) | Shows the latest comic from XKCD |
+| [com.hanime](https://github.com/ld3z/tapestry-plugins/tree/main/com.hanime) | Shows latest videos from the Hanime.tv homepage |
 
 ## Installation
 
